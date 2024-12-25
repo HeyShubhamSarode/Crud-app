@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Operations</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>CRUD Operations: Name, Age, and Phone Number</h1>
+
+        <form id="crud-form">
+            <input type="hidden" id="id" />
+            <input type="text" id="name" placeholder="Enter Name" required />
+            <input type="number" id="age" placeholder="Enter Age" required />
+            <input type="text" id="phone" placeholder="Enter Phone Number" required />
+            <button type="submit">Submit</button>
+        </form>
+
+        <div id="message"></div>
+
+        <h2>People List</h2>
+        <ul id="people-list"></ul>
+    </div>
+
+    <script>
+        const form = document.getElementById('crud-form');
+        const nameField = document.getElementById('name');
+        const ageField = document.getElementById('age');
+        const phoneField = document.getElementById('phone');
+        const peopleList = document.getElementById('people-list');
+        const message = document.getElementById('message');
+        let editingId = null;
+
+        // Fetch and render people from server
+        async function fetchPeople() {
+            const response = await fetch('/people');
+            const people = await response.json();
+            peopleList.innerHTML = '';
+            people.forEach(person => {
+                const li = document.createElement('li');
+                li.innerHTML = `${person.name}, Age: ${person.age}, Phone: ${person.phone} 
+                <button onclick="editPerson(${person.id})">Edit</button>
+                <button onclick="deletePerson(${person.id})">Delete</button>`;
+                peopleList.appendChild(li);
+            });
+        }
+
+        // Handle form submission (Create or Update)
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const person = {
+                name: nameField.value,
+                age: ageField.value,
+                phone: phoneField.value,
+            };
+
+            let url = '/people';
+            let method = 'POST';
+
+            if (editingId !== null) {
+                url = `/people/${editingId}`;
+                method = 'PUT';
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(person)
+            });
+
+            const result = await response.json();
+            message.textContent = result.message;
+            fetchPeople();
+            form.reset();
+            editingId = null;
+        });
+
+        // Edit Person (Populate form with current values)
+        function editPerson(id) {
+            fetch(`/people/${id}`)
+                .then(response => response.json())
+                .then(person => {
+                    nameField.value = person.name;
+                    ageField.value = person.age;
+                    phoneField.value = person.phone;
+                    document.getElementById('id').value = person.id;
+                    editingId = person.id;
+                });
+        }
+
+        // Delete Person
+        function deletePerson(id) {
+            fetch(`/people/${id}`, {
+                method: 'DELETE',
+            }).then(response => response.json())
+              .then(result => {
+                  message.textContent = result.message;
+                  fetchPeople();
+              });
+        }
+
+        // Initial fetch
+        fetchPeople();
+    </script>
+</body>
+</html>
